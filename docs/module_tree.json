@@ -1,0 +1,17 @@
+{
+    "game_entities": {
+        "components": [
+            "circleshape.CircleShape",
+            "player.Player",
+            "asteroid.Asteroid",
+            "shot.Shot"
+        ],
+        "children": {}
+    },
+    "game_systems": {
+        "components": [
+            "asteroidfield.AsteroidField"
+        ],
+        "children": {}
+    }
+}

@@ -1,0 +1,179 @@
+{
+  "asteroid.Asteroid": {
+    "id": "asteroid.Asteroid",
+    "name": "Asteroid",
+    "component_type": "class",
+    "file_path": "/home/colby/code/github/bootdotdev/asteroids/asteroid.py",
+    "relative_path": "asteroid.py",
+    "depends_on": [
+      "asteroid.Asteroid",
+      "logger.log_event",
+      "asteroidfield.AsteroidField"
+    ],
+    "source_code": "class Asteroid(CircleShape):\n    def __init__(self, x, y, radius):\n        super().__init__(x, y, radius)\n\n    def draw(self, screen):\n        pygame.draw.circle(screen, \"white\", self.position, self.radius, LINE_WIDTH)\n\n    def update(self, dt):\n        self.position += self.velocity * dt\n\n    def split(self):\n        from asteroidfield import AsteroidField  # Import here to avoid circular dependency\n        log_event(\"asteroid_split\")\n        self.kill()\n        if self.radius < ASTEROID_MIN_RADIUS:\n            return\n        else:\n            kind = self.radius // ASTEROID_MIN_RADIUS\n            for _ in range(2):\n                new_radius = ASTEROID_MIN_RADIUS * (kind - 1)\n                new_asteroid = Asteroid(self.position.x, self.position.y, new_radius)\n                new_velocity = self.velocity.rotate(random.randint(-45, 45)) * 1.2\n                new_asteroid.velocity = new_velocity\n                AsteroidField().spawn(new_radius, self.position, new_velocity)",
+    "start_line": 7,
+    "end_line": 30,
+    "has_docstring": false,
+    "docstring": "",
+    "parameters": null,
+    "node_type": "class",
+    "base_classes": [
+      "CircleShape"
+    ],
+    "class_name": null,
+    "display_name": "class Asteroid",
+    "component_id": "asteroid.Asteroid"
+  },
+  "asteroidfield.AsteroidField": {
+    "id": "asteroidfield.AsteroidField",
+    "name": "AsteroidField",
+    "component_type": "class",
+    "file_path": "/home/colby/code/github/bootdotdev/asteroids/asteroidfield.py",
+    "relative_path": "asteroidfield.py",
+    "depends_on": [
+      "asteroid.Asteroid"
+    ],
+    "source_code": "class AsteroidField(pygame.sprite.Sprite):\n    edges = [\n        [\n            pygame.Vector2(1, 0),\n            lambda y: pygame.Vector2(-ASTEROID_MAX_RADIUS, y * SCREEN_HEIGHT),\n        ],\n        [\n            pygame.Vector2(-1, 0),\n            lambda y: pygame.Vector2(\n                SCREEN_WIDTH + ASTEROID_MAX_RADIUS, y * SCREEN_HEIGHT\n            ),\n        ],\n        [\n            pygame.Vector2(0, 1),\n            lambda x: pygame.Vector2(x * SCREEN_WIDTH, -ASTEROID_MAX_RADIUS),\n        ],\n        [\n            pygame.Vector2(0, -1),\n            lambda x: pygame.Vector2(\n                x * SCREEN_WIDTH, SCREEN_HEIGHT + ASTEROID_MAX_RADIUS\n            ),\n        ],\n    ]\n\n    def __init__(self):\n        pygame.sprite.Sprite.__init__(self, self.containers)\n        self.spawn_timer = 0.0\n\n    def spawn(self, radius, position, velocity):\n        asteroid = Asteroid(position.x, position.y, radius)\n        asteroid.velocity = velocity\n\n    def update(self, dt):\n        self.spawn_timer += dt\n        if self.spawn_timer > ASTEROID_SPAWN_RATE_SECONDS:\n            self.spawn_timer = 0\n\n            # spawn a new asteroid at a random edge\n            edge = random.choice(self.edges)\n            speed = random.randint(40, 100)\n            velocity = edge[0] * speed\n            velocity = velocity.rotate(random.randint(-30, 30))\n            position = edge[1](random.uniform(0, 1))\n            kind = random.randint(1, ASTEROID_KINDS)\n            self.spawn(ASTEROID_MIN_RADIUS * kind, position, velocity)",
+    "start_line": 7,
+    "end_line": 51,
+    "has_docstring": false,
+    "docstring": "",
+    "parameters": null,
+    "node_type": "class",
+    "base_classes": [
+      "pygame.sprite.Sprite"
+    ],
+    "class_name": null,
+    "display_name": "class AsteroidField",
+    "component_id": "asteroidfield.AsteroidField"
+  },
+  "circleshape.CircleShape": {
+    "id": "circleshape.CircleShape",
+    "name": "CircleShape",
+    "component_type": "class",
+    "file_path": "/home/colby/code/github/bootdotdev/asteroids/circleshape.py",
+    "relative_path": "circleshape.py",
+    "depends_on": [],
+    "source_code": "class CircleShape(pygame.sprite.Sprite):\n    def __init__(self, x, y, radius):\n        # we will be using this later\n        if hasattr(self, \"containers\"):\n            super().__init__(self.containers)\n        else:\n            super().__init__()\n\n        self.position = pygame.Vector2(x, y)\n        self.velocity = pygame.Vector2(0, 0)\n        self.radius = radius\n\n    def draw(self, screen):\n        # must override\n        pass\n\n    def update(self, dt):\n        # must override\n        pass\n\n    def collides_with(self, other):\n        distance = self.position.distance_to(other.position)\n        return distance < (self.radius + other.radius)",
+    "start_line": 4,
+    "end_line": 26,
+    "has_docstring": false,
+    "docstring": "",
+    "parameters": null,
+    "node_type": "class",
+    "base_classes": [
+      "pygame.sprite.Sprite"
+    ],
+    "class_name": null,
+    "display_name": "class CircleShape",
+    "component_id": "circleshape.CircleShape"
+  },
+  "logger.log_state": {
+    "id": "logger.log_state",
+    "name": "log_state",
+    "component_type": "function",
+    "file_path": "/home/colby/code/github/bootdotdev/asteroids/logger.py",
+    "relative_path": "logger.py",
+    "depends_on": [],
+    "source_code": "def log_state():\n    global _frame_count, _state_log_initialized\n\n    # Stop logging after `_MAX_SECONDS` seconds\n    if _frame_count > _FPS * _MAX_SECONDS:\n        return\n\n    # Take a snapshot approx. once per second\n    _frame_count += 1\n    if _frame_count % _FPS != 0:\n        return\n\n    now = datetime.now()\n\n    frame = inspect.currentframe()\n    if frame is None:\n        return\n\n    frame_back = frame.f_back\n    if frame_back is None:\n        return\n\n    local_vars = frame_back.f_locals.copy()\n\n    screen_size = []\n    game_state = {}\n\n    for key, value in local_vars.items():\n        if \"pygame\" in str(type(value)) and hasattr(value, \"get_size\"):\n            screen_size = value.get_size()\n\n        if hasattr(value, \"__class__\") and \"Group\" in value.__class__.__name__:\n            sprites_data = []\n\n            for i, sprite in enumerate(value):\n                if i >= _SPRITE_SAMPLE_LIMIT:\n                    break\n\n                sprite_info = {\"type\": sprite.__class__.__name__}\n\n                if hasattr(sprite, \"position\"):\n                    sprite_info[\"pos\"] = [\n                        round(sprite.position.x, 2),\n                        round(sprite.position.y, 2),\n                    ]\n\n                if hasattr(sprite, \"velocity\"):\n                    sprite_info[\"vel\"] = [\n                        round(sprite.velocity.x, 2),\n                        round(sprite.velocity.y, 2),\n                    ]\n\n                if hasattr(sprite, \"radius\"):\n                    sprite_info[\"rad\"] = sprite.radius\n\n                if hasattr(sprite, \"rotation\"):\n                    sprite_info[\"rot\"] = round(sprite.rotation, 2)\n\n                sprites_data.append(sprite_info)\n\n            game_state[key] = {\"count\": len(value), \"sprites\": sprites_data}\n\n        if len(game_state) == 0 and hasattr(value, \"position\"):\n            sprite_info = {\"type\": value.__class__.__name__}\n\n            sprite_info[\"pos\"] = [\n                round(value.position.x, 2),\n                round(value.position.y, 2),\n            ]\n\n            if hasattr(value, \"velocity\"):\n                sprite_info[\"vel\"] = [\n                    round(value.velocity.x, 2),\n                    round(value.velocity.y, 2),\n                ]\n\n            if hasattr(value, \"radius\"):\n                sprite_info[\"rad\"] = value.radius\n\n            if hasattr(value, \"rotation\"):\n                sprite_info[\"rot\"] = round(value.rotation, 2)\n\n            game_state[key] = sprite_info\n\n    entry = {\n        \"timestamp\": now.strftime(\"%H:%M:%S.%f\")[:-3],\n        \"elapsed_s\": math.floor((now - _start_time).total_seconds()),\n        \"frame\": _frame_count,\n        \"screen_size\": screen_size,\n        **game_state,\n    }\n\n    # New log file on each run\n    mode = \"w\" if not _state_log_initialized else \"a\"\n    with open(\"game_state.jsonl\", mode) as f:\n        f.write(json.dumps(entry) + \"\\n\")\n\n    _state_log_initialized = True",
+    "start_line": 18,
+    "end_line": 115,
+    "has_docstring": false,
+    "docstring": "",
+    "parameters": [],
+    "node_type": "function",
+    "base_classes": null,
+    "class_name": null,
+    "display_name": "function log_state",
+    "component_id": "logger.log_state"
+  },
+  "logger.log_event": {
+    "id": "logger.log_event",
+    "name": "log_event",
+    "component_type": "function",
+    "file_path": "/home/colby/code/github/bootdotdev/asteroids/logger.py",
+    "relative_path": "logger.py",
+    "depends_on": [],
+    "source_code": "def log_event(event_type, **details):\n    global _event_log_initialized\n\n    now = datetime.now()\n\n    event = {\n        \"timestamp\": now.strftime(\"%H:%M:%S.%f\")[:-3],\n        \"elapsed_s\": math.floor((now - _start_time).total_seconds()),\n        \"frame\": _frame_count,\n        \"type\": event_type,\n        **details,\n    }\n\n    mode = \"w\" if not _event_log_initialized else \"a\"\n    with open(\"game_events.jsonl\", mode) as f:\n        f.write(json.dumps(event) + \"\\n\")\n\n    _event_log_initialized = True",
+    "start_line": 118,
+    "end_line": 135,
+    "has_docstring": false,
+    "docstring": "",
+    "parameters": [
+      "event_type"
+    ],
+    "node_type": "function",
+    "base_classes": null,
+    "class_name": null,
+    "display_name": "function log_event",
+    "component_id": "logger.log_event"
+  },
+  "main.main": {
+    "id": "main.main",
+    "name": "main",
+    "component_type": "function",
+    "file_path": "/home/colby/code/github/bootdotdev/asteroids/main.py",
+    "relative_path": "main.py",
+    "depends_on": [
+      "player.Player",
+      "logger.log_event",
+      "asteroidfield.AsteroidField",
+      "logger.log_state"
+    ],
+    "source_code": "def main():\n    pygame.init()\n    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))\n    game_clock = pygame.time.Clock()\n    dt = 0\n    print('Starting Asteroids with pygame version: (%s)' % pygame.version.ver)\n    print('Screen width: %s' % SCREEN_WIDTH)\n    print('Screen height: %s' % SCREEN_HEIGHT)\n    updatable = pygame.sprite.Group()\n    drawable = pygame.sprite.Group()\n    asteroids = pygame.sprite.Group()\n    Asteroid.containers = (asteroids, updatable, drawable)\n    AsteroidField.containers = (updatable)\n    shots = pygame.sprite.Group()\n    Shot.containers = (shots, updatable, drawable)\n    # Player is the name of the class, not an instance of it\n    # This must be done before any Player objects are created\n    Player.containers = (updatable, drawable)\n    player = Player(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)\n    asteroidfield = AsteroidField()\n    while True:\n        log_state()\n        for event in pygame.event.get():\n            if event.type == pygame.QUIT:\n                return\n        screen.fill(\"black\")\n        updatable.update(dt)\n        for asteroid in asteroids:\n            if asteroid.collides_with(player):\n                log_event(\"player_hit\")\n                print(\"Game over!\")\n                sys.exit()\n        for asteroid in asteroids:\n            for shot in shots:\n                if asteroid.collides_with(shot):\n                    log_event(\"asteroid_shot\")\n                    asteroid.split()\n                    shot.kill()\n        for thing in drawable:\n            thing.draw(screen)\n        pygame.display.flip()\n        dt = game_clock.tick(60) / 1000  # 60 FPS cap + catch delta time and convert to seconds",
+    "start_line": 10,
+    "end_line": 51,
+    "has_docstring": false,
+    "docstring": "",
+    "parameters": [],
+    "node_type": "function",
+    "base_classes": null,
+    "class_name": null,
+    "display_name": "function main",
+    "component_id": "main.main"
+  },
+  "player.Player": {
+    "id": "player.Player",
+    "name": "Player",
+    "component_type": "class",
+    "file_path": "/home/colby/code/github/bootdotdev/asteroids/player.py",
+    "relative_path": "player.py",
+    "depends_on": [
+      "shot.Shot"
+    ],
+    "source_code": "class Player(CircleShape):\n    def __init__(self, x, y):\n        super().__init__(x, y, PLAYER_RADIUS)\n        self.rotation = 0\n        self.shot_cooldown = 0\n\n    # in the Player class\n    def triangle(self):\n        forward = pygame.Vector2(0, 1).rotate(self.rotation)\n        right = pygame.Vector2(0, 1).rotate(self.rotation + 90) * self.radius / 1.5\n        a = self.position + forward * self.radius\n        b = self.position - forward * self.radius - right\n        c = self.position - forward * self.radius + right\n        return [a, b, c]\n\n    def draw(self, screen):\n        pygame.draw.polygon(screen, \"white\", self.triangle(), LINE_WIDTH)\n\n    def rotate(self, dt):\n        self.rotation = self.rotation + (PLAYER_TURN_SPEED * dt)\n\n    def move(self, dt):\n        unit_vector = pygame.Vector2(0, 1)\n        rotated_vector = unit_vector.rotate(self.rotation)\n        rotated_with_speed_vector = rotated_vector * PLAYER_SPEED * dt\n        self.position += rotated_with_speed_vector\n        \n    def shoot(self):\n        forward = pygame.Vector2(0, 1).rotate(self.rotation)\n        shot_velocity = forward * PLAYER_SHOT_SPEED\n        shot_position = self.position + forward * self.radius\n        from shot import Shot  # Import here to avoid circular dependency\n        if self.shot_cooldown > 0:\n            return None\n        else:\n            self.shot_cooldown = PLAYER_SHOOT_COOLDOWN_SECONDS\n            shot = Shot(shot_position, shot_velocity, SHOT_RADIUS)\n            return shot\n\n    def update(self, dt):\n        keys = pygame.key.get_pressed()\n\n        if keys[pygame.K_a]:\n            self.rotate(-dt)\n        if keys[pygame.K_d]:\n            self.rotate(dt)\n        if keys[pygame.K_s]:\n            self.move(-dt)\n        if keys[pygame.K_w]:\n            self.move(dt)\n        if keys[pygame.K_SPACE]:\n            shot = self.shoot()\n            return shot\n\n        self.shot_cooldown = max(0, self.shot_cooldown - dt)",
+    "start_line": 5,
+    "end_line": 59,
+    "has_docstring": false,
+    "docstring": "",
+    "parameters": null,
+    "node_type": "class",
+    "base_classes": [
+      "CircleShape"
+    ],
+    "class_name": null,
+    "display_name": "class Player",
+    "component_id": "player.Player"
+  },
+  "shot.Shot": {
+    "id": "shot.Shot",
+    "name": "Shot",
+    "component_type": "class",
+    "file_path": "/home/colby/code/github/bootdotdev/asteroids/shot.py",
+    "relative_path": "shot.py",
+    "depends_on": [],
+    "source_code": "class Shot(CircleShape):\n    def __init__(self, position, velocity, radius=SHOT_RADIUS):\n        super().__init__(position.x, position.y, radius)\n        self.velocity = velocity\n\n    def draw(self, screen):\n        pygame.draw.circle(screen, \"white\", self.position, self.radius, LINE_WIDTH)\n\n    def update(self, dt):\n        self.position += self.velocity * dt",
+    "start_line": 5,
+    "end_line": 14,
+    "has_docstring": false,
+    "docstring": "",
+    "parameters": null,
+    "node_type": "class",
+    "base_classes": [
+      "CircleShape"
+    ],
+    "class_name": null,
+    "display_name": "class Shot",
+    "component_id": "shot.Shot"
+  }
+}
